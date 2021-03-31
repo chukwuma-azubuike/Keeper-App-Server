@@ -22,11 +22,11 @@ app.use(cors({
   credentials: true
 }));
 
-// app.use(express.urlencoded({ extended: true }));
-// app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+// app.use(bodyParser.urlencoded({ extended: true }));
+// app.use(bodyParser.json());
 
 app.use(session({
   secret: 'My Big little secret',
@@ -100,33 +100,73 @@ const notesSchema = {
 
 const Note = mongoose.model('Note', notesSchema);
 
+//Get home route
 app.get('/home', function (req, res, next) {
-  res.send('respond with a resource');
+  req.isAuthenticated() ? User.findById(req.userid, (err, userFound) => {
+    console.log(err)
+    res.send({
+      status: 'OK',
+      message: 'Successfully logged in',
+      notes: userFound.notes
+    })
+  }) : res.send({ status: 'FAILED', message: 'You are currently not logged in' })
 });
 
+// Post to home route
+app.post('/home', (req, res) => {
+  const { title, content } = req.body;
+  req.isAuthenticated() ?
+    User.findByIdAndUpdate(req.userid, { notes: { title, content } }, (err, notesUpdated) => {
+      err ? console.log(err) :
+        res.send({ status: 'OK', message: 'Notes successfully updated!' })
+    }) :
+    res.send({
+      status: 'FAILED',
+      message: 'You are currently not logged in'
+    })
+})
+
+
+
 app.post('/signup', (req, res, next) => {
-  // console.log(req.body)
-  res.send('Holla');
 
   const { username, password } = req.body;
-
-  User.register({ username: username, password: password }, (err, userCreated) => {
+  User.register({ username: username }, password, (err, userCreated) => {
     err ? res.send({
-      message: err
-    }) : console.log('registered')
+      status: 'FAILED',
+      message: 'User already exists'
+    }) :
+      res.send({
+        status: 'OK',
+        message: 'Successfully registered!'
+      })
     passport.authenticate('local')(req, res, () => {
       res.send({
-        message: 'Signed up successfully!'
+        message: `Hello ${username}, you are successfully logged in`
       })
+      res.redirect('/home')
     })
   })
 })
 
-// app.get('/users', function(req, res, next) {
-//   res.send('respond with a resource');
-// });
+app.post('/login', (req, res) => {
 
+  const { username, password } = req.body;
+
+  const userSession = new User({
+    username: username,
+    password: password
+  });
+
+  req.login(userSession, (err) => {
+    err ? res.send({ message: err }) :
+      passport.authenticate('local')(req, res, (err) => {
+        err ? console.log(err) : res.send({
+          status: 'OK',
+          message: 'Successfully logged in'
+        })
+      })
+  })
+})
 
 app.listen(9000, () => console.log('API running on port 9000...'))
-
-// module.exports = app;
