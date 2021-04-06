@@ -10,6 +10,8 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const findOrCreate = require('mongoose-findorcreate');
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 
@@ -30,9 +32,10 @@ app.use(express.json());
 
 app.use(session({
   secret: 'My Big little secret',
-  resave: false,
-  saveUninitialized: false
+  resave: true,
+  saveUninitialized: true
 }));
+app.use(cookieParser('My Big little secret'));
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -100,71 +103,91 @@ const notesSchema = {
 
 const Note = mongoose.model('Note', notesSchema);
 
+function verifyToken(req, res, next) {
+  const bearerHeader = req.headers['authorization'];
+  // console.log(req.headers['authorization'])
+  if (typeof bearerHeader !== 'undefined') {
+    let bearerToken = bearerHeader.split(' ')[1];
+    req.token = bearerToken;
+    next()
+  } else {
+    res.sendStatus(403); //Forbidden
+  }
+}
+
 //Get home route
-app.get('/home', function (req, res, next) {
-  req.isAuthenticated() ? User.findById(req.userid, (err, userFound) => {
-    console.log(err)
-    res.send({
-      status: 'OK',
-      message: 'Successfully logged in',
-      notes: userFound.notes
-    })
-  }) : res.send({ status: 'FAILED', message: 'You are currently not logged in' })
+app.get('/home', verifyToken, function (req, res) {
+
+  jwt.verify(req.token, process.env.SECRET, (err, authData) => {
+    err ? res.sendStatus(403) :
+      User.findOne({ username: authData.user }, (err, userFound) => {
+        err ? sendStatus(403) :
+        res.json({
+          status: 'OK',
+          message: 'Authenticated',
+          notes: userFound.notes
+        })
+      })
+  })
 });
 
 // Post to home route
-app.post('/home', (req, res) => {
+app.post('/home', verifyToken, (req, res) => {
+
   const { title, content } = req.body;
-  req.isAuthenticated() ?
-    User.findByIdAndUpdate(req.userid, { notes: { title, content } }, (err, notesUpdated) => {
-      err ? console.log(err) :
-        res.send({ status: 'OK', message: 'Notes successfully updated!' })
-    }) :
-    res.send({
-      status: 'FAILED',
-      message: 'You are currently not logged in'
-    })
+
+  jwt.verify(req.token, process.env.SECRET, (err, authData) => {
+    err ? res.send(err) : console.log(authData)
+    User.findOneAndUpdate({ username: authData.user },
+      { notes: req.body },
+      (err, notesUpdated) => {
+        err ? console.log(err) :
+          // console.log(`Notes--> ${notesUpdated}`)
+          res.json({
+            status: 'OK',
+            message: 'Notes successfully updated!',
+            data: authData
+          })
+      })
+  })
 })
 
+app.delete('/home', verifyToken, (req, res) => {
+  const id = req.body;
+  // console.log(id);
+})
 
-
-app.post('/signup', (req, res, next) => {
+app.post('/signup', (req, res) => {
 
   const { username, password } = req.body;
+
   User.register({ username: username }, password, (err, userCreated) => {
-    err ? res.send({
+    err ? res.json({
       status: 'FAILED',
       message: 'User already exists'
     }) :
-      res.send({
-        status: 'OK',
-        message: 'Successfully registered!'
+      jwt.sign({ user: username }, process.env.SECRET, (err, token) => {
+        err ? console.log(err) :
+          res.json({
+            token: token,
+            status: 'OK',
+            message: 'Successfully registered!'
+          })
       })
-    passport.authenticate('local')(req, res, () => {
-      res.send({
-        message: `Hello ${username}, you are successfully logged in`
-      })
-      res.redirect('/home')
-    })
   })
+
 })
 
 app.post('/login', (req, res) => {
 
   const { username, password } = req.body;
 
-  const userSession = new User({
-    username: username,
-    password: password
-  });
-
-  req.login(userSession, (err) => {
-    err ? res.send({ message: err }) :
-      passport.authenticate('local')(req, res, (err) => {
-        err ? console.log(err) : res.send({
-          status: 'OK',
-          message: 'Successfully logged in'
-        })
+  jwt.sign({ user: username }, process.env.SECRET, (err, token) => {
+    err ? console.log(err) :
+      res.json({
+        token: token,
+        status: 'OK',
+        message: 'Successfully logged in'
       })
   })
 })
