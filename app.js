@@ -71,6 +71,7 @@ passport.use(new GoogleStrategy({
 
 mongoose.connect('mongodb://localhost:27017/keeperAppDB', { useNewUrlParser: true, useUnifiedTopology: true });
 mongoose.set('useCreateIndex', true);
+mongoose.set('useFindAndModify', false);
 
 const userSchema = new mongoose.Schema({
   userName: String,
@@ -122,11 +123,11 @@ app.get('/home', verifyToken, function (req, res) {
     err ? res.sendStatus(403) :
       User.findOne({ username: authData.user }, (err, userFound) => {
         err ? sendStatus(403) :
-        res.json({
-          status: 'OK',
-          message: 'Authenticated',
-          notes: userFound.notes
-        })
+          res.json({
+            status: 'OK',
+            message: 'Authenticated',
+            notes: userFound.notes
+          })
       })
   })
 });
@@ -134,27 +135,47 @@ app.get('/home', verifyToken, function (req, res) {
 // Post to home route
 app.post('/home', verifyToken, (req, res) => {
 
-  const { title, content } = req.body;
+  console.log(req.body);
 
   jwt.verify(req.token, process.env.SECRET, (err, authData) => {
-    err ? res.send(err) : console.log(authData)
-    User.findOneAndUpdate({ username: authData.user },
-      { notes: req.body },
-      (err, notesUpdated) => {
-        err ? console.log(err) :
-          // console.log(`Notes--> ${notesUpdated}`)
-          res.json({
-            status: 'OK',
-            message: 'Notes successfully updated!',
-            data: authData
-          })
-      })
+    err ? res.send(err) :
+      User.findOneAndUpdate({ username: authData.user },
+        { $push: { notes: req.body } },
+        (err, notesUpdated) => {
+          err ? console.log(err) :
+            // console.log(`Notes--> ${notesUpdated}`)
+            res.json({
+              status: 'OK',
+              message: 'Notes successfully updated!',
+              data: authData
+            })
+        })
   })
 })
 
-app.delete('/home', verifyToken, (req, res) => {
-  const id = req.body;
-  // console.log(id);
+app.post('/home/delete', verifyToken, (req, res) => {
+  const id = req.body.id;
+  const arrayIndex = `notes.${id}`;
+  console.log(arrayIndex)
+  const notes = `notes`;
+  jwt.verify(req.token, process.env.SECRET, (err, authData) => {
+    err ? console.log(err) :
+      User.findOneAndUpdate({ username: authData.user }, { $pull: arrayIndex }, { new: true },
+        (err, setNotesForDelete) => {
+          err ? console.log(err) :
+            console.log(setNotesForDelete)
+          // User.findOneAndUpdate({ username: authData.user }, { $pull: { [arrayIndex]: 'title', [arrayIndex]: 'content' } }, { new: true },
+          //   (err, remainingNotes) => {
+          //     err ? console.log(err) :
+          //       res.json({
+          //         status: 'OK',
+          //         data: remainingNotes
+          //       })
+          //   }
+          // )
+        })
+  })
+  res.json({ status: 'OK' })
 })
 
 app.post('/signup', (req, res) => {
