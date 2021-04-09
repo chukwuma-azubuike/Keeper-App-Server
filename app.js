@@ -12,6 +12,7 @@ const findOrCreate = require('mongoose-findorcreate');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
+const jwtDecode = require('jwt-decode');
 
 const app = express();
 
@@ -119,9 +120,12 @@ function verifyToken(req, res, next) {
 //Get home route
 app.get('/home', verifyToken, function (req, res) {
 
+  var decoded = jwtDecode(req.token);
+  // console.log(decoded.id)
+
   jwt.verify(req.token, process.env.SECRET, (err, authData) => {
     err ? res.sendStatus(403) :
-      User.findOne({ username: authData.user }, (err, userFound) => {
+      User.findOne({ _id: authData.id }, (err, userFound) => {
         err ? sendStatus(403) :
           res.json({
             status: 'OK',
@@ -139,32 +143,37 @@ app.post('/home', verifyToken, (req, res) => {
 
   jwt.verify(req.token, process.env.SECRET, (err, authData) => {
     err ? res.send(err) :
-      User.findOneAndUpdate({ username: authData.user },
-        { $push: { notes: req.body } },
-        (err, notesUpdated) => {
-          err ? console.log(err) :
-            // console.log(`Notes--> ${notesUpdated}`)
-            res.json({
-              status: 'OK',
-              message: 'Notes successfully updated!',
-              data: authData
-            })
-        })
+      console.log(authData);
+    User.findOneAndUpdate({ username: authData.user },
+      { $push: { notes: req.body } },
+      (err, notesUpdated) => {
+        err ? console.log(err) :
+          // console.log(`Notes--> ${notesUpdated}`)
+          res.json({
+            status: 'OK',
+            message: 'Notes successfully updated!',
+            data: authData
+          })
+      })
   })
 })
 
 app.post('/home/delete', verifyToken, (req, res) => {
   const id = req.body.id;
   const arrayIndex = `notes.${id}`;
-  console.log(arrayIndex)
   const notes = `notes`;
+  var decoded = jwtDecode(req.token);
+  console.log(decoded.id)
+  // console.log(arrayIndex)
   jwt.verify(req.token, process.env.SECRET, (err, authData) => {
     err ? console.log(err) :
-      User.findOneAndUpdate({ username: authData.user }, { $pull: arrayIndex }, { new: true },
+      User.findOneAndUpdate({ _id: authData.id }, { $pull: { notes } }, { new: true },
         (err, setNotesForDelete) => {
           err ? console.log(err) :
-            console.log(setNotesForDelete)
-          // User.findOneAndUpdate({ username: authData.user }, { $pull: { [arrayIndex]: 'title', [arrayIndex]: 'content' } }, { new: true },
+            setNotesForDelete.save((err) => {
+              err ? console.log(err) : console.log(setNotesForDelete)
+            })
+          // User.findOneAndUpdate({ username: authData.user }, { $pull: arrayIndex }, { new: true },
           //   (err, remainingNotes) => {
           //     err ? console.log(err) :
           //       res.json({
@@ -203,13 +212,30 @@ app.post('/login', (req, res) => {
 
   const { username, password } = req.body;
 
-  jwt.sign({ user: username }, process.env.SECRET, (err, token) => {
-    err ? console.log(err) :
-      res.json({
-        token: token,
-        status: 'OK',
-        message: 'Successfully logged in'
+  const userSession = new User({
+    username: username,
+    password: password
+  });
+
+  req.login(userSession, function (err) {
+    if (err) {
+      console.log(err);
+    } else {
+      passport.authenticate('local', (err, user, info) => {
+        err ? console.log(err) :
+          jwt.sign({ user: username, id: user._id }, process.env.SECRET, (err, token) => {
+            err ? console.log(err) :
+              res.json({
+                token: token,
+                status: 'OK',
+                message: 'Successfully logged in'
+              })
+          });
       })
+        (req, res, function (err) {
+          !err ? console.log('Success') : console.log(err);
+        })
+    }
   })
 })
 
