@@ -120,6 +120,7 @@ function verifyToken(req, res, next) {
 //Get home route
 app.get('/home', verifyToken, function (req, res) {
 
+
   var decoded = jwtDecode(req.token);
   // console.log(decoded.id)
 
@@ -220,17 +221,25 @@ app.post('/login', (req, res) => {
   req.login(userSession, function (err) {
     if (err) {
       console.log(err);
+      res.json({
+        status: 'FAILED',
+        message: 'User does not exist!'
+      })
     } else {
       passport.authenticate('local', (err, user, info) => {
         err ? console.log(err) :
-          jwt.sign({ user: username, id: user._id }, process.env.SECRET, (err, token) => {
-            err ? console.log(err) :
-              res.json({
-                token: token,
-                status: 'OK',
-                message: 'Successfully logged in'
-              })
-          });
+          !user ? res.json({
+            status: 'FAILED',
+            message: 'Wrong credentials'
+          }) :
+            jwt.sign({ user: username, id: user._id }, process.env.SECRET, (err, token) => {
+              err ? console.log(err) :
+                res.json({
+                  token: token,
+                  status: 'OK',
+                  message: 'Successfully logged in'
+                })
+            });
       })
         (req, res, function (err) {
           !err ? console.log('Success') : console.log(err);
