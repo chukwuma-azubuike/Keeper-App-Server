@@ -70,7 +70,11 @@ passport.use(new GoogleStrategy({
 //   }
 // ));
 
-mongoose.connect('mongodb://localhost:27017/keeperAppDB', { useNewUrlParser: true, useUnifiedTopology: true });
+//Connect to remote MongDB cluster
+mongoose.connect(process.env.MONGODB_LINK,
+  { useNewUrlParser: true, useUnifiedTopology: true },
+  (err) => { err ? console.log(err) : console.log('MongoDB is live...') });
+// mongoose.connect('mongodb://localhost:27017/keeperAppDB', { useNewUrlParser: true, useUnifiedTopology: true });
 mongoose.set('useCreateIndex', true);
 mongoose.set('useFindAndModify', false);
 
