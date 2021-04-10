@@ -131,7 +131,7 @@ app.get('/home', verifyToken, function (req, res) {
           res.json({
             status: 'OK',
             message: 'Authenticated',
-            notes: userFound.notes
+            notes: userFound.notes && userFound.notes
           })
       })
   })
@@ -193,18 +193,36 @@ app.post('/signup', (req, res) => {
   const { username, password } = req.body;
 
   User.register({ username: username }, password, (err, userCreated) => {
-    err ? res.json({
-      status: 'FAILED',
-      message: 'User already exists'
-    }) :
-      jwt.sign({ user: username }, process.env.SECRET, (err, token) => {
-        err ? console.log(err) :
-          res.json({
-            token: token,
-            status: 'OK',
-            message: 'Successfully registered!'
-          })
+    if (err) {
+      res.json({
+        status: 'FAILED',
+        message: 'User already exists'
       })
+    } else {
+      console.log('registered')
+      const userSession = new User({
+        username: username,
+        password: password
+      });
+      req.login(userSession, function (err) {
+        if (err) {
+          console.log(err);
+        } else {
+          console.log('logged in')
+          User.findOne({ username: username }, (err, userFound) => {
+            jwt.sign({ user: username, id: userFound._id }, process.env.SECRET, (err, token) => {
+              err ? console.log(err) :
+                console.log('token created')
+              res.json({
+                token: token,
+                status: 'OK',
+                message: 'Successfully registered!'
+              })
+            })
+          })
+        }
+      })
+    }
   })
 
 })
