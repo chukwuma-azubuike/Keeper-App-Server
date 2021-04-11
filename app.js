@@ -20,7 +20,7 @@ app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
 app.use(cors({
-  origin: 'https://keeper-app-02-api.herokuapp.com',
+  origin: 'https://keeper-app-02.herokuapp.com',
   // methods: 'GET, HEAD, PUT, PATCH, POST, DELETE'
   credentials: true
 }));
