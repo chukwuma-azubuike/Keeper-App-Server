@@ -20,7 +20,7 @@ app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: 'https://keeper-app-02-api.herokuapp.com',
   // methods: 'GET, HEAD, PUT, PATCH, POST, DELETE'
   credentials: true
 }));
@@ -124,9 +124,8 @@ function verifyToken(req, res, next) {
 //Get home route
 app.get('/home', verifyToken, function (req, res) {
 
-
   var decoded = jwtDecode(req.token);
-  // console.log(decoded.id)
+  console.log('decoded.id')
 
   jwt.verify(req.token, process.env.SECRET, (err, authData) => {
     err ? res.sendStatus(403) :
