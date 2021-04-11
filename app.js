@@ -6,8 +6,8 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const passport = require('passport');
 const passportLocalMongoose = require('passport-local-mongoose');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const FacebookStrategy = require('passport-facebook').Strategy;
+// const GoogleStrategy = require('passport-google-oauth20').Strategy;
+// const FacebookStrategy = require('passport-facebook').Strategy;
 const findOrCreate = require('mongoose-findorcreate');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
@@ -44,19 +44,19 @@ app.use(cookieParser('My Big little secret'));
 app.use(passport.initialize());
 app.use(passport.session());
 
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.GOOGLE_CALLBACK_URL,
-  userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
-},
-  function (accessToken, refreshToken, profile, cb) {
-    console.log(profile);
-    User.findOrCreate({ googleId: profile.id }, function (err, user) {
-      return cb(err, user);
-    });
-  }
-));
+// passport.use(new GoogleStrategy({
+//   clientID: process.env.GOOGLE_CLIENT_ID,
+//   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+//   callbackURL: process.env.GOOGLE_CALLBACK_URL,
+//   userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
+// },
+//   function (accessToken, refreshToken, profile, cb) {
+//     console.log(profile);
+//     User.findOrCreate({ googleId: profile.id }, function (err, user) {
+//       return cb(err, user);
+//     });
+//   }
+// ));
 
 // passport.use(new FacebookStrategy({
 //   clientID: process.env.FACEBOOK_APP_ID,
