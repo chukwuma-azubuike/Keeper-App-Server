@@ -274,4 +274,4 @@ app.post('/login', (req, res) => {
   })
 })
 
-app.listen(9000, () => console.log('API running on port 9000...'))
+app.listen(process.env.PORT || 9000, () => console.log('API running on port 9000...'))
