@@ -19,11 +19,14 @@ const app = express();
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
-app.use(cors({
-  origin: 'https://keeper-app-02.herokuapp.com',
-  // methods: 'GET, HEAD, PUT, PATCH, POST, DELETE'
-  credentials: true
-}));
+// app.use(cors({
+//   origin: 'https://keeper-app-02.herokuapp.com',
+//   // origin: 'http://localhost:3000',
+//   // methods: 'GET, HEAD, PUT, PATCH, POST, DELETE',
+//   credentials: true
+// }));
+
+app.use(cors());
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -125,7 +128,7 @@ function verifyToken(req, res, next) {
 app.get('/home', verifyToken, function (req, res) {
 
   var decoded = jwtDecode(req.token);
-  console.log('decoded.id')
+  // console.log('decoded.id')
 
   jwt.verify(req.token, process.env.SECRET, (err, authData) => {
     err ? res.sendStatus(403) :
@@ -198,6 +201,8 @@ app.post('/signup', (req, res) => {
   User.register({ username: username }, password, (err, userCreated) => {
     if (err) {
       res.json({
+        data: req.body,
+        error: err,
         status: 'FAILED',
         message: 'User already exists'
       })
